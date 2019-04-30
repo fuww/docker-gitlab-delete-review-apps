@@ -10,5 +10,5 @@ gitlab_api_request()
 REVIEW_APP_IDS=$(gitlab_api_request "GET" "environments" | jq -c '.[] | select(.name | startswith("review/")) | .id')
 
 for REVIEW_APP_ID in $REVIEW_APP_IDS; do
-  gitlab_api_request "DELETE" "environments/$REVIEW_APP_ID" > /dev/null
+  gitlab_api_request "POST" "environments/$REVIEW_APP_ID/stop" > /dev/null
 done
