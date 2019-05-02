@@ -4,11 +4,15 @@ set -e -o pipefail
 
 gitlab_api_request()
 {
-  curl -fsX $1 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/$2"
+  curl $3 -fsX $1 --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/$2"
 }
 
-REVIEW_APP_IDS=$(gitlab_api_request "GET" "environments?per_page=1000" | jq -c '.[] | select(.name | startswith("review/")) | .id')
+TOTAL_PAGES=$(gitlab_api_request "GET" "environments?per_page=100" -I | grep X-Total-Pages | grep -oE '[[:digit:]]+')
 
-for REVIEW_APP_ID in $REVIEW_APP_IDS; do
-  gitlab_api_request "POST" "environments/$REVIEW_APP_ID/stop" > /dev/null
+for PAGE in $(seq 1 $TOTAL_PAGES); do
+  REVIEW_APP_IDS=$(gitlab_api_request "GET" "environments?page=$PAGE&per_page=100" | jq -c '.[] | select(.name | startswith("review/")) | .id')
+
+  for REVIEW_APP_ID in $REVIEW_APP_IDS; do
+    gitlab_api_request "POST" "environments/$REVIEW_APP_ID/stop" > /dev/null
+  done
 done
